@@ -1,0 +1,11 @@
+# Data
+data
+
+# Logs and debugging
+logs
+debug
+
+# Python cache and build files
+.venv
+venv
+__pycache__
