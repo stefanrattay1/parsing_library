@@ -8,12 +8,14 @@ import pytest
 from rdm_parser.parsers.bz011_parser import (
     ERR_COLUMN_MISSING,
     ERR_DATA_READ,
+    ERR_METADATA_INVALID,
     ERR_METADATA_JSON,
     ERR_METADATA_KEY,
     ERR_METADATA_READ,
     ERR_ROW_SHORT,
     ERR_ROW_TIMESTAMP,
     ERR_ROW_VALUE,
+    BZ011Parser,
     parse_bz011,
 )
 
@@ -90,6 +92,18 @@ def test_metadata_key_error_when_active_area_missing():
     assert result["records"] == []
 
 
+def test_metadata_invalid_when_active_area_not_positive():
+    result = parse_bz011(VALID_DAT, FIXTURES / "negative_area.json")
+    assert _codes(result) == [ERR_METADATA_INVALID]
+    assert result["records"] == []
+
+
+def test_metadata_invalid_when_active_area_not_numeric():
+    result = parse_bz011(VALID_DAT, FIXTURES / "string_area.json")
+    assert _codes(result) == [ERR_METADATA_INVALID]
+    assert result["records"] == []
+
+
 def test_data_read_error_when_missing(tmp_path):
     missing = tmp_path / "does_not_exist.dat"
     result = parse_bz011(missing, VALID_META)
@@ -134,6 +148,21 @@ def test_bad_rows_error_line_numbers_are_1_based():
     assert by_code[ERR_ROW_TIMESTAMP]["line"] == 3
     assert by_code[ERR_ROW_VALUE]["line"] == 4
     assert by_code[ERR_ROW_SHORT]["line"] == 5
+
+
+def test_crlf_data_file_parses_identically_to_lf():
+    lf = parse_bz011(VALID_DAT, VALID_META)
+    crlf = parse_bz011(FIXTURES / "valid_small_crlf.dat", VALID_META)
+    assert crlf["errors"] == []
+    assert [r["time_stamp"] for r in crlf["records"]] == [r["time_stamp"] for r in lf["records"]]
+    assert len(crlf["records"]) == len(lf["records"]) == 3
+
+
+def test_class_api_matches_function_api():
+    fn_result = parse_bz011(VALID_DAT, VALID_META)
+    cls_result = BZ011Parser(VALID_DAT, VALID_META).parse()
+    assert cls_result["records"] == fn_result["records"]
+    assert cls_result["metadata"] == fn_result["metadata"]
 
 
 def test_bad_rows_kept_records_are_the_valid_ones():
