@@ -1,28 +1,145 @@
 """Tests for the BZ011 parser."""
 
-import pytest
+from datetime import datetime
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.parent / "data"
-BZ011_DAT = DATA_DIR / "BZ011_Rohdaten.dat"
-BZ011_META = DATA_DIR / "metadata_BZ011_Rohdaten.json"
+import pytest
+
+from rdm_parser.parsers.bz011_parser import (
+    ERR_COLUMN_MISSING,
+    ERR_DATA_READ,
+    ERR_METADATA_JSON,
+    ERR_METADATA_KEY,
+    ERR_METADATA_READ,
+    ERR_ROW_SHORT,
+    ERR_ROW_TIMESTAMP,
+    ERR_ROW_VALUE,
+    parse_bz011,
+)
+
+FIXTURES = Path(__file__).parent / "fixtures" / "bz011"
+VALID_DAT = FIXTURES / "valid_small.dat"
+VALID_META = FIXTURES / "valid_small.json"
 
 
-def test_bz011_returns_expected_keys():
-    # TODO: implement — result should have "metadata" and "records" keys
-    pytest.skip("not implemented yet")
+def _codes(result: dict) -> list[str]:
+    return [e["code"] for e in result["errors"]]
 
 
-def test_bz011_record_fields():
-    # TODO: each record must have exactly time_stamp, cell_voltage, current_density
-    pytest.skip("not implemented yet")
+# --- Happy path -------------------------------------------------------------
+
+def test_valid_small_parses_without_errors():
+    result = parse_bz011(VALID_DAT, VALID_META)
+    assert result["errors"] == []
+    assert len(result["records"]) == 3
 
 
-def test_bz011_current_density_calculation():
-    # TODO: verify current_density = current_A / active_area_cm2
-    pytest.skip("not implemented yet")
+def test_valid_small_returns_expected_keys():
+    result = parse_bz011(VALID_DAT, VALID_META)
+    assert set(result.keys()) == {"metadata", "records", "errors"}
 
 
-def test_bz011_timestamp_ordering_preserved():
-    # TODO: timestamps must appear in the same order as in the source file
-    pytest.skip("not implemented yet")
+def test_valid_small_record_fields():
+    result = parse_bz011(VALID_DAT, VALID_META)
+    for rec in result["records"]:
+        assert set(rec.keys()) == {"time_stamp", "cell_voltage", "current_density"}
+        assert isinstance(rec["time_stamp"], datetime)
+        assert isinstance(rec["cell_voltage"], float)
+        assert isinstance(rec["current_density"], float)
+
+
+def test_valid_small_current_density_calculation():
+    # active_area_cm2 = 25, first row current = 2.5 → density = 0.1
+    result = parse_bz011(VALID_DAT, VALID_META)
+    assert result["records"][0]["current_density"] == pytest.approx(0.1)
+    assert result["records"][1]["current_density"] == pytest.approx(0.2)
+    assert result["records"][2]["current_density"] == pytest.approx(0.4)
+
+
+def test_valid_small_timestamp_ordering_preserved():
+    result = parse_bz011(VALID_DAT, VALID_META)
+    stamps = [r["time_stamp"] for r in result["records"]]
+    assert stamps == sorted(stamps)
+
+
+def test_valid_small_metadata_passthrough():
+    result = parse_bz011(VALID_DAT, VALID_META)
+    assert result["metadata"]["active_area_cm2"] == 25
+    assert result["metadata"]["testbench"] == "BZ011"
+
+
+# --- File-level errors ------------------------------------------------------
+
+def test_metadata_read_error_when_missing(tmp_path):
+    missing = tmp_path / "does_not_exist.json"
+    result = parse_bz011(VALID_DAT, missing)
+    assert _codes(result) == [ERR_METADATA_READ]
+    assert result["records"] == []
+    assert result["metadata"] is None
+
+
+def test_metadata_json_error_on_invalid_json():
+    result = parse_bz011(VALID_DAT, FIXTURES / "bad_metadata.json")
+    assert _codes(result) == [ERR_METADATA_JSON]
+    assert result["records"] == []
+
+
+def test_metadata_key_error_when_active_area_missing():
+    result = parse_bz011(VALID_DAT, FIXTURES / "missing_key.json")
+    assert _codes(result) == [ERR_METADATA_KEY]
+    assert result["records"] == []
+
+
+def test_data_read_error_when_missing(tmp_path):
+    missing = tmp_path / "does_not_exist.dat"
+    result = parse_bz011(missing, VALID_META)
+    assert _codes(result) == [ERR_DATA_READ]
+    assert result["records"] == []
+    # metadata still loaded successfully before data read failed
+    assert result["metadata"] is not None
+
+
+def test_data_read_error_when_empty():
+    result = parse_bz011(FIXTURES / "empty.dat", VALID_META)
+    assert _codes(result) == [ERR_DATA_READ]
+    assert result["records"] == []
+
+
+def test_column_missing_error():
+    result = parse_bz011(FIXTURES / "missing_column.dat", VALID_META)
+    assert ERR_COLUMN_MISSING in _codes(result)
+    assert result["records"] == []
+    msg = next(e["message"] for e in result["errors"] if e["code"] == ERR_COLUMN_MISSING)
+    assert "Strom I / A" in msg
+
+
+# --- Row-level errors -------------------------------------------------------
+
+def test_bad_rows_skipped_but_good_rows_kept():
+    result = parse_bz011(FIXTURES / "bad_rows.dat", VALID_META)
+    # 5 data rows: row 1 OK, row 2 bad timestamp, row 3 bad value,
+    # row 4 too short, row 5 OK → 2 valid records, 3 errors.
+    assert len(result["records"]) == 2
+    assert len(result["errors"]) == 3
+    codes = _codes(result)
+    assert ERR_ROW_TIMESTAMP in codes
+    assert ERR_ROW_VALUE in codes
+    assert ERR_ROW_SHORT in codes
+
+
+def test_bad_rows_error_line_numbers_are_1_based():
+    result = parse_bz011(FIXTURES / "bad_rows.dat", VALID_META)
+    by_code = {e["code"]: e for e in result["errors"]}
+    # Header is line 1 → bad timestamp on line 3, bad value on line 4, short row on line 5.
+    assert by_code[ERR_ROW_TIMESTAMP]["line"] == 3
+    assert by_code[ERR_ROW_VALUE]["line"] == 4
+    assert by_code[ERR_ROW_SHORT]["line"] == 5
+
+
+def test_bad_rows_kept_records_are_the_valid_ones():
+    result = parse_bz011(FIXTURES / "bad_rows.dat", VALID_META)
+    stamps = [r["time_stamp"] for r in result["records"]]
+    assert stamps == [
+        datetime(2024, 8, 5, 13, 11, 2),
+        datetime(2024, 8, 5, 13, 11, 6),
+    ]
