@@ -12,6 +12,7 @@ from rdm_parser.parsers.greenlight_parser import (
     ERR_ROW_SHORT,
     ERR_ROW_TIMESTAMP,
     ERR_ROW_VALUE,
+    ERR_ZERO_VOLTAGE,
     GreenlightParser,
     parse_greenlight,
 )
@@ -142,6 +143,47 @@ def test_class_api_matches_function_api():
     cls_result = GreenlightParser(VALID_CSV).parse()
     assert cls_result["records"] == fn_result["records"]
     assert cls_result["metadata"] == fn_result["metadata"]
+
+
+def test_zero_voltage_with_current_emits_warning_but_keeps_record(tmp_path):
+    data_path = tmp_path / "zero_voltage_warning.csv"
+    data_path.write_text(
+        "Station ID,G99-TEST\n"
+        "Test Name,fixture-small\n"
+        "---\n"
+        "Long Name Row,ignored\n"
+        "Units Row,ignored\n"
+        "Time Stamp,cell_voltage_001,current_density\n"
+        "2024-01-01 00:00:00.000,0,0.1\n",
+        encoding="utf-8",
+    )
+
+    result = parse_greenlight(data_path)
+
+    assert len(result["records"]) == 1
+    assert _codes(result) == [ERR_ZERO_VOLTAGE]
+    assert result["errors"][0]["line"] == 7
+    assert result["records"][0]["cell_voltage"] == 0.0
+    assert result["records"][0]["current_density"] == pytest.approx(0.1)
+
+
+def test_zero_voltage_without_current_does_not_emit_warning(tmp_path):
+    data_path = tmp_path / "resting_zero_voltage.csv"
+    data_path.write_text(
+        "Station ID,G99-TEST\n"
+        "Test Name,fixture-small\n"
+        "---\n"
+        "Long Name Row,ignored\n"
+        "Units Row,ignored\n"
+        "Time Stamp,cell_voltage_001,current_density\n"
+        "2024-01-01 00:00:00.000,0,0\n",
+        encoding="utf-8",
+    )
+
+    result = parse_greenlight(data_path)
+
+    assert result["errors"] == []
+    assert len(result["records"]) == 1
 
 
 # --- Smoke test against the real data file ---------------------------------

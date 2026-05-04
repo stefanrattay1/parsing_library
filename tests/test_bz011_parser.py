@@ -15,6 +15,7 @@ from rdm_parser.parsers.bz011_parser import (
     ERR_ROW_SHORT,
     ERR_ROW_TIMESTAMP,
     ERR_ROW_VALUE,
+    ERR_ZERO_VOLTAGE,
     BZ011Parser,
     parse_bz011,
 )
@@ -172,3 +173,35 @@ def test_bad_rows_kept_records_are_the_valid_ones():
         datetime(2024, 8, 5, 13, 11, 2),
         datetime(2024, 8, 5, 13, 11, 6),
     ]
+
+
+def test_zero_voltage_with_current_emits_warning_but_keeps_record(tmp_path):
+    data_path = tmp_path / "initialization_warning.dat"
+    data_path.write_text(
+        "Datum\tSpg U / V\tStrom I / A\tSet Kommentar\n"
+        "05.08.24 13:13:57\t0\t0.488\tInitialisierung_0\n",
+        encoding="utf-8",
+    )
+
+    result = parse_bz011(data_path, VALID_META)
+
+    assert len(result["records"]) == 1
+    assert _codes(result) == [ERR_ZERO_VOLTAGE]
+    assert result["errors"][0]["line"] == 2
+    assert "Initialisierung_0" in result["errors"][0]["message"]
+    assert result["records"][0]["cell_voltage"] == 0.0
+    assert result["records"][0]["current_density"] == pytest.approx(0.01952)
+
+
+def test_zero_voltage_without_current_does_not_emit_warning(tmp_path):
+    data_path = tmp_path / "resting_zero_voltage.dat"
+    data_path.write_text(
+        "Datum\tSpg U / V\tStrom I / A\n"
+        "05.08.24 13:13:57\t0\t0\n",
+        encoding="utf-8",
+    )
+
+    result = parse_bz011(data_path, VALID_META)
+
+    assert result["errors"] == []
+    assert len(result["records"]) == 1

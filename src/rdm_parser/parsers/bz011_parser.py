@@ -23,8 +23,10 @@ ERR_COLUMN_MISSING = "COLUMN_MISSING"
 ERR_ROW_SHORT = "ROW_TOO_SHORT"
 ERR_ROW_TIMESTAMP = "ROW_TIMESTAMP_ERROR"
 ERR_ROW_VALUE = "ROW_VALUE_ERROR"
+ERR_ZERO_VOLTAGE = "ZERO_VOLTAGE_WARNING"
 
 _REQUIRED_COLUMNS = ("Datum", "Spg U / V", "Strom I / A")
+_COMMENT_COLUMN = "Set Kommentar"
 _TIMESTAMP_FORMAT = "%d.%m.%y %H:%M:%S"
 
 
@@ -117,6 +119,8 @@ class BZ011Parser(BaseParser):
         if result["errors"]:
             return result
 
+        comment_index = headers.index(_COMMENT_COLUMN) if _COMMENT_COLUMN in headers else None
+
         min_cols = max(indices.values()) + 1
         header_lineno = lines.index(header_line)
 
@@ -158,11 +162,27 @@ class BZ011Parser(BaseParser):
                 })
                 continue
 
+            current_density = current_a / active_area
+            if cell_voltage == 0.0 and current_density != 0.0:
+                phase = None
+                if comment_index is not None and comment_index < len(cols):
+                    phase = cols[comment_index].strip() or None
+
+                message = "Zero cell voltage with non-zero current density"
+                if phase is not None:
+                    message += f" during phase {phase!r}"
+
+                result["errors"].append({
+                    "code": ERR_ZERO_VOLTAGE,
+                    "message": message,
+                    "line": lineno,
+                })
+
             result["records"].append({
                 "time_stamp": time_stamp,
                 "cell_voltage": cell_voltage,
                 # Strom I [A] / active_area_cm2 [cm²] → A/cm²
-                "current_density": current_a / active_area,
+                "current_density": current_density,
             })
 
         return result
@@ -180,7 +200,8 @@ def parse_bz011(data_path: Path, metadata_path: Path, encoding: str | None = Non
     Returns:
         ``ParseResult`` dict with ``metadata``, ``records`` and ``errors``.
         File-level problems populate ``errors`` and return empty records.
-        Row-level problems skip the offending row and append an error entry
-        with the 1-based line number.
+        Row-level parse problems skip the offending row and append an error
+        entry with the 1-based line number. Non-fatal data quality warnings
+        also appear in ``errors`` while keeping the parsed row.
     """
     return BZ011Parser(data_path, metadata_path, encoding).parse()

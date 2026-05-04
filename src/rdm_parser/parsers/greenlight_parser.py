@@ -23,6 +23,7 @@ ERR_COLUMN_MISSING = "COLUMN_MISSING"
 ERR_ROW_SHORT = "ROW_TOO_SHORT"
 ERR_ROW_TIMESTAMP = "ROW_TIMESTAMP_ERROR"
 ERR_ROW_VALUE = "ROW_VALUE_ERROR"
+ERR_ZERO_VOLTAGE = "ZERO_VOLTAGE_WARNING"
 
 _REQUIRED_COLUMNS = ("Time Stamp", "cell_voltage_001", "current_density")
 _TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
@@ -148,6 +149,13 @@ class GreenlightParser(BaseParser):
                 })
                 continue
 
+            if cell_voltage == 0.0 and current_density != 0.0:
+                result["errors"].append({
+                    "code": ERR_ZERO_VOLTAGE,
+                    "message": "Zero cell voltage with non-zero current density",
+                    "line": lineno,
+                })
+
             result["records"].append({
                 "time_stamp": time_stamp,
                 "cell_voltage": cell_voltage,
@@ -167,5 +175,7 @@ def parse_greenlight(data_path: Path, encoding: str | None = None) -> ParseResul
 
     Returns:
         ``ParseResult`` dict with ``metadata``, ``records`` and ``errors``.
+        Row-level parse problems skip the offending row. Non-fatal data
+        quality warnings remain in ``errors`` while keeping the parsed row.
     """
     return GreenlightParser(data_path, encoding).parse()

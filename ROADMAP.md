@@ -19,16 +19,14 @@
 - [x] Edge cases: empty file, malformed row, missing metadata, missing column, CRLF vs LF
 - [x] Add ruff lint step (CI + `pyproject.toml` config)
 - [x] README: install (incl. `pip install git+https://...`), usage example, design decisions
+- [x] Fill in scope statement and AI-assistance disclosure in README
 
 ## TODO
 
 ### Parser correctness
 - [ ] Locale number formats (decimal comma) — currently BZ011-specific in `_parse_float`; consider a shared helper if a new format needs it.
 
-### Docs (README)
-- [ ] Fill in scope statement and AI-assistance disclosure
-- [ ] Replace `<user>` placeholder in install URLs with the actual GitHub org/user
-
 # Ideas & Notes
+- Maybe only certain tests. Tests are a little excessive right now.
 - No hard-coded paths; accept file paths / file-like objects; works on Windows + Linux
 - All parsing files are in the src folder. This can be used (github link) to install the package.
