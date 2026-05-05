@@ -132,6 +132,8 @@ The docs workflow in `.github/workflows/docs.yml` builds the site on pull reques
 
 If Pages is not enabled yet for the repository, enable GitHub Pages with **GitHub Actions** as the source before expecting the deploy job to publish.
 
+Published documentation: [stefanrattay1.github.io/parsing_library](https://stefanrattay1.github.io/parsing_library/)
+
 ### AI Assistance Disclosure
 
 AI assistance was used for small advice along the way and for agentic coding. Agentic coding (claude code with sonnet4.6 and opus4.7) included: empty structure generation, python methods code generation with input, output and  intended logic as a prompt. The roadmap was written by hand and added to context as a reference for the agent.
