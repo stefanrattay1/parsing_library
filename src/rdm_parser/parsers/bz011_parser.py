@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from .base import BaseParser, ParseResult, get_logger, read_text_with_fallback
+from .base import BaseParser, ParseResult, build_metadata, get_logger, read_text_with_fallback
 
 log = get_logger(__name__)
 
@@ -84,7 +84,18 @@ class BZ011Parser(BaseParser):
             })
             return result
 
-        result["metadata"] = metadata
+        result["metadata"] = build_metadata(
+            source_format=self.name,
+            source_metadata=metadata,
+            station_id=metadata.get("testbench"),
+            test_name=metadata.get("experiment_title"),
+            experiment_type=metadata.get("experiment_type"),
+            sample_name=metadata.get("sample"),
+            started_at=metadata.get("experiment_date"),
+            location=metadata.get("testbench_location"),
+            active_area_cm2=active_area,
+            source_record_id=metadata.get("elabftw_id"),
+        )
 
         # --- data file ---
         try:

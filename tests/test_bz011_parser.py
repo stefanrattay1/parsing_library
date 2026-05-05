@@ -65,10 +65,14 @@ def test_valid_small_timestamp_ordering_preserved():
     assert stamps == sorted(stamps)
 
 
-def test_valid_small_metadata_passthrough():
+def test_valid_small_metadata_is_normalized():
     result = parse_bz011(VALID_DAT, VALID_META)
     assert result["metadata"]["active_area_cm2"] == 25
-    assert result["metadata"]["testbench"] == "BZ011"
+    assert result["metadata"]["schema"] == "rdm_parser.metadata.v1"
+    assert result["metadata"]["source_format"] == "bz011"
+    assert result["metadata"]["station_id"] == "BZ011"
+    assert result["metadata"]["test_name"] == "test"
+    assert result["metadata"]["source_metadata"]["testbench"] == "BZ011"
 
 
 # --- File-level errors ------------------------------------------------------

@@ -25,7 +25,16 @@ All parsers return a dictionary with this shape:
 
 ```python
 {
-    "metadata": {...} | None,
+    "metadata": {
+        "schema": "rdm_parser.metadata.v1",
+        "source_format": "bz011" | "greenlight",
+        "station_id": str | None,
+        "test_name": str | None,
+        "started_at": str | None,
+        "active_area_cm2": float | None,
+        "source_metadata": {...},
+        ...
+    } | None,
     "records": [
         {"time_stamp": datetime, "cell_voltage": float, "current_density": float},
         ...

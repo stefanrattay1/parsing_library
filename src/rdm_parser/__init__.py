@@ -5,7 +5,7 @@ format detection via ``parse_file()``, the shared parser contract, direct parser
 classes, and standardizer error constants.
 """
 
-from .parsers.base import BaseParser, ParseResult
+from .parsers.base import BaseParser, DescriptiveMetadata, ParseResult
 from .parsers.bz011_parser import BZ011Parser
 from .parsers.greenlight_parser import GreenlightParser
 from .standardizer import (
@@ -19,6 +19,7 @@ from .standardizer import (
 __all__ = [
     "parse_file",
     "BaseParser",
+    "DescriptiveMetadata",
     "ParseResult",
     "BZ011Parser",
     "GreenlightParser",

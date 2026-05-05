@@ -41,7 +41,16 @@ Each parser returns the same `ParseResult` dict:
 
 ```python
 {
-    "metadata": {...} | None,
+    "metadata": {
+        "schema": "rdm_parser.metadata.v1",
+        "source_format": "bz011" | "greenlight",
+        "station_id": str | None,
+        "test_name": str | None,
+        "started_at": str | None,
+        "active_area_cm2": float | None,
+        "source_metadata": {...},
+        ...
+    } | None,
     "records": [
         {"time_stamp": datetime, "cell_voltage": float, "current_density": float},
         ...
@@ -73,7 +82,8 @@ print(result["records"][0])
 from rdm_parser.parsers import parse_greenlight
 
 result = parse_greenlight(Path("test_greenlight.csv"))
-print(result["metadata"]["Station ID"])
+print(result["metadata"]["station_id"])
+print(result["metadata"]["source_metadata"]["Station ID"])
 ```
 
 ### Class API
@@ -142,8 +152,9 @@ AI assistance was used for small advice along the way and for agentic coding. Ag
 
 ### Metadata
 This is very specific to the files given. Some metadata could also be read from data files themselves.
-- **BZ011** stores metadata in a separate JSON file (an array). The first element must contain `active_area_cm2` as a positive number. The whole metadata object is included in the result.
-- **Greenlight** stores metadata as `key,value` lines at the top of the CSV, above a dashes separator. All non-empty pairs are collected into the result's `metadata` dict as strings.
+- All parsers now return one normalized descriptive metadata schema with stable keys such as `source_format`, `station_id`, `test_name`, `started_at`, `active_area_cm2`, and `source_metadata`.
+- **BZ011** stores metadata in a separate JSON file (an array). The first element must contain `active_area_cm2` as a positive number. Source-specific keys such as `experiment_title` stay available under `metadata["source_metadata"]`.
+- **Greenlight** stores metadata as `key,value` lines at the top of the CSV, above a dashes separator. Those original key/value pairs stay available under `metadata["source_metadata"]`.
 
 ### Timestamps
 - BZ011 uses the format `%d.%m.%y %H:%M:%S` (day-month-year).

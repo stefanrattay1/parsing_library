@@ -1,9 +1,10 @@
-from .base import BaseParser, ParseResult
+from .base import BaseParser, DescriptiveMetadata, ParseResult
 from .bz011_parser import BZ011Parser, parse_bz011
 from .greenlight_parser import GreenlightParser, parse_greenlight
 
 __all__ = [
     "BaseParser",
+    "DescriptiveMetadata",
     "ParseResult",
     "BZ011Parser",
     "GreenlightParser",

@@ -13,7 +13,7 @@ mirroring the BZ011 output schema {time_stamp, cell_voltage, current_density}.
 from datetime import datetime
 from pathlib import Path
 
-from .base import BaseParser, ParseResult, get_logger, read_text_with_fallback
+from .base import BaseParser, ParseResult, build_metadata, get_logger, read_text_with_fallback
 
 log = get_logger(__name__)
 
@@ -44,7 +44,7 @@ class GreenlightParser(BaseParser):
         self.encoding = encoding
 
     def parse(self) -> ParseResult:
-        result: ParseResult = {"metadata": {}, "records": [], "errors": []}
+        result: ParseResult = {"metadata": None, "records": [], "errors": []}
 
         try:
             text = read_text_with_fallback(self.data_path, self.encoding)
@@ -83,7 +83,15 @@ class GreenlightParser(BaseParser):
             elif len(cols) == 1:
                 metadata[first] = ""
 
-        result["metadata"] = metadata
+        result["metadata"] = build_metadata(
+            source_format=self.name,
+            source_metadata=metadata,
+            format_version=metadata.get("Format"),
+            station_id=metadata.get("Station ID"),
+            test_name=metadata.get("Test Name"),
+            started_at=metadata.get("Start Time"),
+            operator_name=metadata.get("User Name"),
+        )
 
         if header_lineno is None:
             result["errors"].append({

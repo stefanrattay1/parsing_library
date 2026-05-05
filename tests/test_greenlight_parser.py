@@ -59,10 +59,13 @@ def test_greenlight_timestamp_ordering_preserved():
     assert stamps[0] == datetime(2024, 1, 1, 0, 0, 0)
 
 
-def test_greenlight_metadata_includes_known_keys():
+def test_greenlight_metadata_is_normalized():
     result = parse_greenlight(VALID_CSV)
-    assert result["metadata"]["Station ID"] == "G99-TEST"
-    assert result["metadata"]["Test Name"] == "fixture-small"
+    assert result["metadata"]["schema"] == "rdm_parser.metadata.v1"
+    assert result["metadata"]["source_format"] == "greenlight"
+    assert result["metadata"]["station_id"] == "G99-TEST"
+    assert result["metadata"]["test_name"] == "fixture-small"
+    assert result["metadata"]["source_metadata"]["Station ID"] == "G99-TEST"
 
 
 def test_greenlight_cell_voltage_from_cell_voltage_001():
@@ -193,4 +196,4 @@ def test_greenlight_parses_full_data_file_without_errors():
     result = parse_greenlight(GREENLIGHT_CSV)
     assert result["errors"] == []
     assert len(result["records"]) > 300
-    assert result["metadata"].get("Station ID") == "G21-2370"
+    assert result["metadata"]["station_id"] == "G21-2370"

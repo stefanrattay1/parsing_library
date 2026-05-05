@@ -30,14 +30,16 @@ def test_dispatch_bz011_by_extension_and_content():
     assert result["errors"] == []
     assert len(result["records"]) == 3
     assert result["records"][0]["time_stamp"] == datetime(2024, 8, 5, 13, 11, 2)
-    assert result["metadata"]["testbench"] == "BZ011"
+    assert result["metadata"]["source_format"] == "bz011"
+    assert result["metadata"]["station_id"] == "BZ011"
 
 
 def test_dispatch_greenlight_by_extension_and_content():
     result = parse_file(GREENLIGHT_CSV)
     assert result["errors"] == []
     assert len(result["records"]) == 3
-    assert result["metadata"]["Station ID"] == "G99-TEST"
+    assert result["metadata"]["source_format"] == "greenlight"
+    assert result["metadata"]["station_id"] == "G99-TEST"
 
 
 def test_dispatch_bz011_when_extension_unknown_but_content_recognised():
