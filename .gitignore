@@ -9,5 +9,6 @@ debug
 .venv
 venv
 __pycache__
+docs/doxygen/
 
 *.egg-info/

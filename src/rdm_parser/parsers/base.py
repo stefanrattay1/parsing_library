@@ -16,12 +16,30 @@ from typing import TypedDict
 
 
 class ParseError(TypedDict):
+    """Non-fatal parser error entry.
+
+    Attributes:
+        code: Stable machine-readable error code.
+        message: Human-readable explanation of the failure.
+        line: 1-based row number when the error is tied to input data,
+            otherwise ``None``.
+    """
+
     code: str
     message: str
     line: int | None
 
 
 class ParseResult(TypedDict):
+    """Standard parser output.
+
+    Attributes:
+        metadata: Format-specific metadata dictionary, or ``None`` when the
+            input does not provide metadata.
+        records: Parsed and normalized data rows.
+        errors: Non-fatal issues collected during parsing.
+    """
+
     metadata: dict | None
     records: list[dict]
     errors: list[ParseError]

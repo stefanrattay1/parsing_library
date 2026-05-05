@@ -1,3 +1,10 @@
+"""Public package exports for rdm-parser.
+
+The root package exposes the small API surface intended for downstream use:
+format detection via ``parse_file()``, the shared parser contract, direct parser
+classes, and standardizer error constants.
+"""
+
 from .parsers.base import BaseParser, ParseResult
 from .parsers.bz011_parser import BZ011Parser
 from .parsers.greenlight_parser import GreenlightParser

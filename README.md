@@ -106,6 +106,32 @@ pytest
 ruff check src tests
 ```
 
+## Documentation
+
+This repo ships with a Doxygen configuration for local API docs and GitHub Pages publishing.
+
+### Build locally
+
+Install Doxygen first. On Ubuntu or Debian:
+
+```bash
+sudo apt update && sudo apt install -y doxygen graphviz
+```
+
+Then build the docs from the repository root:
+
+```bash
+doxygen Doxyfile
+```
+
+Open `docs/doxygen/html/index.html` in a browser to inspect the generated site.
+
+### Publish from GitHub Actions
+
+The docs workflow in `.github/workflows/docs.yml` builds the site on pull requests and deploys it to GitHub Pages on pushes to `main`.
+
+If Pages is not enabled yet for the repository, enable GitHub Pages with **GitHub Actions** as the source before expecting the deploy job to publish.
+
 ### AI Assistance Disclosure
 
 AI assistance was used for small advice along the way and for agentic coding. Agentic coding (claude code with sonnet4.6 and opus4.7) included: empty structure generation, python methods code generation with input, output and  intended logic as a prompt. The roadmap was written by hand and added to context as a reference for the agent.
